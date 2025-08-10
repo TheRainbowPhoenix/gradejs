@@ -1,0 +1,19 @@
+{
+  "tasks": {
+    "db-migrate": "deno run -A --unstable-ffi --env migrations/run_migrations.ts",
+    "run-api": "deno run -A --unstable-kv --unstable-ffi src/main.ts",
+    "run-worker": "deno run -A --unstable-kv --unstable-ffi src/worker.ts",
+    "schedule-syncs": "deno run -A --unstable-kv --unstable-ffi src/schedule-syncs.ts"
+  },
+  "imports": {
+    "oak": "https://deno.land/x/oak@v12.4.0/mod.ts",
+    "zod": "https://deno.land/x/zod@v3.21.4/mod.ts",
+    "postgres": "https://deno.land/x/postgresjs/mod.js",
+    "ulid": "jsr:@std/ulid",
+    "dotenv": "https://deno.land/std@0.192.0/dotenv/mod.ts",
+    "@db/sqlite": "jsr:@db/sqlite@0.12"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "dom"]
+  }
+}
