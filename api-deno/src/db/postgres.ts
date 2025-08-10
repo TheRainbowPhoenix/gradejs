@@ -9,7 +9,10 @@ import {
   PackageVulnerability,
   Task,
   TaskType,
+  SearchResultItem, 
 } from "../types.ts";
+
+export const dbType = "postgres";
 
 // Load environment variables from .env file
 const DATABASE_URL = Deno.env.get("DATABASE_URL");
@@ -249,4 +252,41 @@ export async function completeTask(id: string) {
 
 export async function failTask(id: string, error?: string) {
   await sql`UPDATE tasks SET status = 'failed', payload = JSONB_SET(payload, '{error}', ${sql.json(error || 'Unknown error')}) WHERE id = ${id}`;
+}
+
+export async function searchEntities(query: string): Promise<SearchResultItem[]> {
+  const searchTerm = `%${query}%`;
+  const limit = 5; // Limit results per entity type
+
+  // Query for packages
+  const packageQuery = sql<SearchResultItem[]>`
+    SELECT
+      'package' as type,
+      name,
+      description
+    FROM package_metadata
+    WHERE name ILIKE ${searchTerm}
+    ORDER BY monthly_downloads DESC NULLS LAST
+    LIMIT ${limit}
+  `;
+
+  // Query for scans (hostnames)
+  // This query finds matching hostnames and joins to find the latest processed scan for each
+  const scanQuery = sql<SearchResultItem[]>`
+    SELECT DISTINCT ON (h.id)
+        'scan' as type,
+        h.id as hostname,
+        w.path,
+        jsonb_array_length(s.scan_result->'identified_packages') as "packageCount"
+    FROM hostnames h
+    LEFT JOIN webpages w ON h.id = w.hostname_id
+    LEFT JOIN webpage_scans s ON w.id = s.web_page_id
+    WHERE h.id ILIKE ${searchTerm} AND s.status = 'processed'
+    ORDER BY h.id, s.created_at DESC
+    LIMIT ${limit}
+  `;
+
+  const [packages, scans] = await Promise.all([packageQuery, scanQuery]);
+
+  return [...packages, ...scans];
 }

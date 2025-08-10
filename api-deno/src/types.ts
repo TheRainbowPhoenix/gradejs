@@ -32,6 +32,10 @@ export interface ScanResult {
   // Other fields like identifiedModuleMap can be added here, they'll be part of the JSONB column
 }
 
+export type SearchResultItem =
+  | { type: 'scan'; hostname: string; path: string | null; packageCount: number | null }
+  | { type: 'package'; name: string; description: string | null };
+
 export interface IdentifiedPackage {
   name: string;
   version_set: string[];
@@ -57,6 +61,8 @@ export interface PackageVulnerability {
   osv_id: string;
   package_name: string;
   package_version_range: string;
+  summary?: string;
+  severity?: string;
   osv_data?: any; // JSONB, raw OSV data
 }
 
@@ -77,4 +83,9 @@ export interface Task {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: string; // ISO 8601
   processed_at?: string; // ISO 8601
+}
+
+export interface IDatabase {
+  failTask(id: string, error?: string): Promise<void> | void;
+  searchEntities(query: string): Promise<SearchResultItem[]>;
 }

@@ -1,5 +1,5 @@
 import { Router, Context, helpers } from "./deps.ts";
-import { createScan, getLatestScanByUrl, getPackageInfo } from "./db/index.ts";
+import { createScan, getLatestScanByUrl, getPackageInfo, enqueueTask, searchEntities } from "./db/index.ts";
 
 const router = new Router();
 
@@ -49,11 +49,23 @@ router.get("/packages/:name", async (ctx: Context) => {
 
 // Simple search endpoint
 router.get("/search", async (ctx: Context) => {
-    // A real implementation would require more complex querying
-    // of the KV store, which can be slow without proper indexing.
-    ctx.response.body = {
-        message: "Search not fully implemented. Deno KV requires careful index design for efficient searching."
-    };
+  const { q } = helpers.getQuery(ctx);
+
+  if (!q || typeof q !== 'string' || q.trim().length < 2) {
+    ctx.response.status = 400;
+    ctx.response.body = { error: "Search query 'q' must be at least 2 characters long." };
+    return;
+  }
+
+  try {
+    const results = await searchEntities(q.trim());
+    ctx.response.body = results;
+  } catch (error) {
+    console.error("Search endpoint error:", error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: "An error occurred during the search." };
+  }
 });
+
 
 export default router;

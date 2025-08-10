@@ -33,4 +33,5 @@ export const {
     dequeueTask,
     completeTask,
     failTask,
+    searchEntities,
 } = dbModule;

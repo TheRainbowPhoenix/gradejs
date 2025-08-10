@@ -1,12 +1,13 @@
-import { ScanResult, IdentifiedPackage } from "./db.ts";
+import { IdentifiedPackage, ScanResult } from "./types.ts";
+
 
 // A list of potential packages to be "found"
 const FAKE_PACKAGES: IdentifiedPackage[] = [
-  { name: "react", versionSet: ["18.2.0"] },
-  { name: "lodash", versionSet: ["4.17.21"] },
-  { name: "oak", versionSet: ["12.4.0"] },
-  { name: "zod", versionSet: ["3.21.4"] },
-  { name: "moment", versionSet: ["2.29.4"] },
+  { name: "react", version_set: ["18.2.0"] },
+  { name: "lodash", version_set: ["4.17.21"] },
+  { name: "oak", version_set: ["12.4.0"] },
+  { name: "zod", version_set: ["3.21.4"] },
+  { name: "moment", version_set: ["2.29.4"] },
 ];
 
 /**
@@ -24,10 +25,10 @@ export async function performScan(url: string): Promise<ScanResult> {
   await new Promise(resolve => setTimeout(resolve, 3000));
 
   // Return a random subset of fake packages
-  const identifiedPackages = FAKE_PACKAGES.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 3) + 1);
+  const identified_packages = FAKE_PACKAGES.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 3) + 1);
 
   const result: ScanResult = {
-    identifiedPackages,
+    identified_packages,
   };
 
   console.log(`[Scanner] Completed mock scan for: ${url}`);

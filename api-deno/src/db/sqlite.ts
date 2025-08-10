@@ -9,7 +9,10 @@ import {
   PackageVulnerability,
   Task,
   TaskType,
+  SearchResultItem,
 } from "../types.ts";
+
+export const dbType = "sqlite";
 
 const db = new Database(Deno.env.get("SQLITE_PATH") || "gradejs.db", {
     int64: true, // Use BigInt for integers
@@ -213,4 +216,60 @@ export function completeTask(id: string) {
 export function failTask(id: string, error?: string) {
   using stmt = db.prepare("UPDATE tasks SET status = 'failed', payload = json_patch(payload, json_object('error', ?)) WHERE id = ?");
   stmt.run(error || 'Unknown error', id);
+}
+
+export async function searchEntities(query: string): Promise<SearchResultItem[]> {
+  const searchTerm = `%${query}%`;
+  const limit = 5;
+
+  // 1. Search for packages
+  using pkgStmt = db.prepare(`
+    SELECT
+      'package' as type,
+      name,
+      description
+    FROM package_metadata
+    WHERE name LIKE ?
+    ORDER BY monthly_downloads DESC
+    LIMIT ?
+  `);
+  const packages = pkgStmt.all<SearchResultItem>(searchTerm, limit);
+
+  // 2. Search for hostnames
+  using hostStmt = db.prepare("SELECT id as hostname FROM hostnames WHERE id LIKE ? LIMIT ?");
+  const matchingHostnames = hostStmt.all<{ hostname: string }>(searchTerm, limit);
+
+  // 3. For each hostname, find its latest scan details
+  const scans: SearchResultItem[] = [];
+  using scanDetailStmt = db.prepare(`
+    SELECT
+      w.path,
+      s.scan_result
+    FROM webpage_scans s
+    JOIN webpages w ON s.web_page_id = w.id
+    WHERE w.hostname_id = ? AND s.status = 'processed'
+    ORDER BY s.created_at DESC
+    LIMIT 1
+  `);
+
+  for (const host of matchingHostnames) {
+    const scanDetail = scanDetailStmt.get<{ path: string; scan_result: string | null }>(host.hostname);
+    let packageCount: number | null = null;
+    if (scanDetail?.scan_result) {
+      try {
+        const result = JSON.parse(scanDetail.scan_result);
+        packageCount = result.identified_packages?.length ?? 0;
+      } catch {
+        // Ignore if JSON is invalid
+      }
+    }
+    scans.push({
+      type: 'scan',
+      hostname: host.hostname,
+      path: scanDetail?.path || null,
+      packageCount: packageCount,
+    });
+  }
+
+  return [...packages, ...scans];
 }

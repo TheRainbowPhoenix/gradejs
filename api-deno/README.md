@@ -78,6 +78,6 @@ curl http://localhost:8000/scans/by-url?url=https://deno.land/
 **3. Search for packages:**
 
 ```bash
-curl http://localhost:8000/search?q=oak
+curl http://localhost:8000/search?q=deno
 ```
 
